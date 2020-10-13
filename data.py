@@ -1,3 +1,5 @@
+# import sys
+# sys.path.insert(0, 'src/vendor') # Location of packages that follow
 import json
 from datetime import timedelta, datetime, date
 import math
@@ -5,6 +7,7 @@ import pandas as pd
 import numpy as np
 from requests_oauthlib import OAuth2Session
 from urllib.parse import urlparse, parse_qs
+from lambda_decorators import cors_headers
 import fitbit
 import requests
 import webbrowser
@@ -12,7 +15,17 @@ import base64
 import os 
 import logging
 logging.basicConfig(level=logging.DEBUG)
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
+if os.environ['STAGE'] == 'dev':
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
+if os.environ['STAGE'] == 'prod':
+    # cors_url = 'https://www.understandyoursleep.com'
+    cors_url = 'http://localhost:8000'
+else:
+    cors_url = 'http://localhost:8000'
+
+cors_url = 'http://localhost:8000'
 
 """
 Global Variables
@@ -43,7 +56,7 @@ oauth = OAuth2Session(
 Fitbit API Oauth - Authorization
 @--------------@
 """
-
+@cors_headers(origin=cors_url)
 def auth(event, context):
     """
     Oauth (Authorization)
@@ -52,13 +65,12 @@ def auth(event, context):
     authorization_url, state = oauth.authorization_url(
         url
     )
-    webbrowser.open(authorization_url)
+
+    
 
     response = {
         "statusCode": 200,
-        "body": {
-            "message": "Authorization Successful!"
-        }
+        "body": json.dumps(authorization_url)
     }
 
     return response
@@ -427,3 +439,13 @@ def adjust_data_structure(jsonObj):
         return True
 
     return output_json
+
+def main(event, context):
+    a = np.arange(15).reshape(3, 5)
+
+    print("Your numpy array:")
+    print(a)
+
+
+if __name__ == "__main__":
+    main('', '')
