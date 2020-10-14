@@ -1,5 +1,3 @@
-# import sys
-# sys.path.insert(0, 'src/vendor') # Location of packages that follow
 import json
 from datetime import timedelta, datetime, date
 import math
@@ -10,7 +8,6 @@ from urllib.parse import urlparse, parse_qs
 from lambda_decorators import cors_headers
 import fitbit
 import requests
-import webbrowser
 import base64
 import os 
 import logging
@@ -24,8 +21,6 @@ if os.environ['STAGE'] == 'prod':
     cors_url = 'http://localhost:8000'
 else:
     cors_url = 'http://localhost:8000'
-
-cors_url = 'http://localhost:8000'
 
 """
 Global Variables
@@ -66,8 +61,6 @@ def auth(event, context):
         url
     )
 
-    
-
     response = {
         "statusCode": 200,
         "body": json.dumps(authorization_url)
@@ -80,18 +73,30 @@ def auth(event, context):
 Fitbit API Oauth - Access Token Generation
 @--------------@
 """
-
+@cors_headers(origin=cors_url)
 def generate_access_token(event, context):
     
     fitbit_code = event['queryStringParameters']['code']
     fitbit_state = event['queryStringParameters']['state']
-    fitbit_access_token = event['queryStringParameters']['access_token']
-    fitbit_refresh_token = event['queryStringParameters']['refresh_token']
-    fitbit_user_id = event['queryStringParameters']['user_id']
     start_date = event['queryStringParameters']['start_date']
     end_date = event['queryStringParameters']['end_date']
 
-    # ADD IN CODE TO HANDLE IF CODES ARE PRESENT, BUT AUTHORIZATION IS NOT. i.e. form submit without initial authorization
+    if 'queryStringParameters' in event and 'access_token' in event['queryStringParameters']:
+        if event['queryStringParameters']['access_token'] != '':
+            fitbit_access_token = event['queryStringParameters']['access_token']
+        else:
+            fitbit_access_token = ''
+    if 'queryStringParameters' in event and 'refresh_token' in event['queryStringParameters']:
+        if event['queryStringParameters']['refresh_token'] != '':
+            fitbit_refresh_token = event['queryStringParameters']['refresh_token']
+        else:
+            fitbit_refresh_token = ''
+    if 'queryStringParameters' in event and 'user_id' in event['queryStringParameters']:
+        if event['queryStringParameters']['user_id'] != '':
+            fitbit_user_id = event['queryStringParameters']['user_id']
+        else:
+            fitbit_user_id = ''
+    
 
     fitbit_authorization_response = str(redirect_url + "?code=" + fitbit_code + "&state=" + fitbit_state)
 
@@ -100,6 +105,7 @@ def generate_access_token(event, context):
     Fetch access_token to make requests to Fitbit API
     """
     if fitbit_access_token == '':
+        
         token = oauth.fetch_token(
             token_url,
             code=fitbit_code,
@@ -111,6 +117,7 @@ def generate_access_token(event, context):
         access_token = token['access_token']
         refresh_token = token['refresh_token']
         user_id = token['user_id']
+
     else:
         """
         Check access_token status with validation request
@@ -167,12 +174,12 @@ def generate_access_token(event, context):
 
     response = {
         "statusCode": 200,
-        "body": {
+        "body": json.dumps({
             "sleep_data": [sleep_data],
             "access_token": access_token,
             "refresh_token": refresh_token,
             "user_id": user_id
-        }
+        })
     }
 
     return response
@@ -439,13 +446,3 @@ def adjust_data_structure(jsonObj):
         return True
 
     return output_json
-
-def main(event, context):
-    a = np.arange(15).reshape(3, 5)
-
-    print("Your numpy array:")
-    print(a)
-
-
-if __name__ == "__main__":
-    main('', '')
